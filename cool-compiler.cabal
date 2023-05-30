@@ -69,6 +69,7 @@ library
 
     -- Other library packages from which modules are imported.
     build-depends:    base ^>=4.17.1.0,
+                      text,
                       megaparsec,
 
     -- Directories containing source files.
@@ -109,7 +110,7 @@ test-suite cool-compiler-test
     default-language: GHC2021
 
     -- Modules included in this executable, other than Main.
-    -- other-modules:
+    other-modules: LexerTest
 
     -- LANGUAGE extensions used by modules in this package.
     -- other-extensions:
@@ -126,5 +127,6 @@ test-suite cool-compiler-test
     -- Test dependencies.
     build-depends:
         base ^>=4.17.1.0,
-        HUnit,
+        hspec,
+        hspec-megaparsec,
         cool-compiler
