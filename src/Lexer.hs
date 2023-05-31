@@ -5,7 +5,7 @@ module Lexer where
 import Data.Char (isAlphaNum)
 import Data.Text (Text, cons, pack)
 import Data.Void (Void)
-import Text.Megaparsec (MonadParsec (notFollowedBy, takeWhileP), Parsec, anySingle, choice, eof, many, manyTill, parse, satisfy, (<|>))
+import Text.Megaparsec (MonadParsec (notFollowedBy, takeWhileP), Parsec, anySingle, choice, eof, many, manyTill, parse, satisfy, try, (<|>))
 import Text.Megaparsec.Char (alphaNumChar, char, lowerChar, space1, string, upperChar)
 import Text.Megaparsec.Char.Lexer qualified as L
 import Text.Megaparsec.Error (ParseErrorBundle)
@@ -238,27 +238,27 @@ identP = Ident <$> lexeme (cons <$> lowerChar <*> takeWhileP Nothing isIdentChar
 tokenP :: Parser Token
 tokenP =
     choice
-        [ classP
-        , inheritsP
-        , newP
-        , notP
-        , isvoidP
+        [ try classP
+        , try inheritsP
+        , try newP
+        , try notP
+        , try isvoidP
         , dotP
         , atP
-        , ifP
-        , thenP
-        , elseP
-        , fiP
-        , whileP
-        , loopP
-        , poolP
-        , caseP
-        , ofP
-        , esacP
+        , try ifP
+        , try thenP
+        , try elseP
+        , try fiP
+        , try whileP
+        , try loopP
+        , try poolP
+        , try caseP
+        , try ofP
+        , try esacP
         , resultsP
-        , letP
+        , try letP
         , assignP
-        , inP
+        , try inP
         , tildeP
         , plusP
         , minusP
@@ -282,7 +282,7 @@ tokenP =
         ]
 
 tokensP :: Parser [Token]
-tokensP = many tokenP <* eof
+tokensP = sc *> many tokenP <* eof
 
 tokenize :: String -> Either (ParseErrorBundle Text Void) [Token]
 tokenize = parse tokensP "" . pack
