@@ -5,8 +5,8 @@ module Lexer where
 import Data.Char (isAlphaNum)
 import Data.Text (Text, cons, pack)
 import Data.Void (Void)
-import Text.Megaparsec (MonadParsec (notFollowedBy, takeWhileP), Parsec, choice, eof, many, manyTill, parse, satisfy, (<|>))
-import Text.Megaparsec.Char (char, lowerChar, space1, string, upperChar)
+import Text.Megaparsec (MonadParsec (notFollowedBy, takeWhileP), Parsec, anySingle, choice, eof, many, manyTill, parse, satisfy, (<|>))
+import Text.Megaparsec.Char (alphaNumChar, char, lowerChar, space1, string, upperChar)
 import Text.Megaparsec.Char.Lexer qualified as L
 import Text.Megaparsec.Error (ParseErrorBundle)
 
@@ -209,7 +209,21 @@ booleanP :: Parser Token
 booleanP = Boolean <$> (True <$ pKeyword "true" <|> False <$ pKeyword "false")
 
 stringP :: Parser Token
-stringP = String . pack <$> lexeme (char '\"' *> manyTill L.charLiteral (char '\"'))
+stringP = String . pack <$> lexeme (char '\"' *> manyTill charLiteral (char '\"'))
+  where
+    charLiteral = charEscaped <|> anySingle
+    charEscaped =
+        char '\\'
+            *> choice
+                [ char '\"'
+                , char '\\'
+                , char '\n'
+                , '\n' <$ char 'n'
+                , '\t' <$ char 't'
+                , '\b' <$ char 'b'
+                , '\f' <$ char 'f'
+                , alphaNumChar
+                ]
 
 {- types -}
 

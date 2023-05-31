@@ -23,6 +23,7 @@ tests = do
     testLet
     testCase
     testBlock
+    testStringSpecialChars
 
 testClass :: Spec
 testClass = do
@@ -148,4 +149,4 @@ testStringSpecialChars = do
         it "should tokenize string with special chars" $ do
             tokenize
                 (unlines ["class A {", "    s1 : String <- \"ab\\tcd\";", "    s2 : String <- \"ab\\ncd\";", "    s3 : String <- \"ab\\", "cd\";", "    s4 : String <- \"ab\\\\cd\";", "    s5 : String <- \"ab\\zcd\";", "};"])
-                `shouldParse` [Class, Type "A", LeftSquirly, Ident "s1", Colon, Type "String", Assign, String "ab\tcd", SemiColon, Ident "s2", Colon, Type "String", Assign, String "ab\ncd", SemiColon, Ident "s3", Colon, Type "String", Assign, String "ab\\", String "cd", SemiColon, Ident "s4", Colon, Type "String", Assign, String "ab\\cd", SemiColon, Ident "s5", Colon, Type "String", Assign, String "abzcd", SemiColon, RightSquirly, SemiColon]
+                `shouldParse` [Class, Type "A", LeftSquirly, Ident "s1", Colon, Type "String", Assign, String "ab\tcd", SemiColon, Ident "s2", Colon, Type "String", Assign, String "ab\ncd", SemiColon, Ident "s3", Colon, Type "String", Assign, String "ab\ncd", SemiColon, Ident "s4", Colon, Type "String", Assign, String "ab\\cd", SemiColon, Ident "s5", Colon, Type "String", Assign, String "abzcd", SemiColon, RightSquirly, SemiColon]
