@@ -1,8 +1,8 @@
 module Main (main) where
 
-import LexerTest (testClass)
+import LexerTest (tests)
 import Test.Hspec (hspec)
 
 main :: IO ()
 main = hspec $ do
-    testClass
+    tests

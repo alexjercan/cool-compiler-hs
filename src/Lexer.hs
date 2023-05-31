@@ -27,7 +27,7 @@ data Token
     | Let
     | In
     | Not
-    | Isvoid
+    | IsVoid
     | Tilde
     | Plus
     | Minus
@@ -75,7 +75,7 @@ symbol = L.symbol sc
 pKeyword :: Text -> Parser Text
 pKeyword keyword = lexeme $ string keyword <* notFollowedBy (satisfy isIdentChar)
 
-{- key words - classes -}
+{- classes -}
 classP :: Parser Token
 classP = Class <$ pKeyword "class"
 
@@ -85,7 +85,19 @@ inheritsP = Inherits <$ pKeyword "inherits"
 newP :: Parser Token
 newP = New <$ pKeyword "new"
 
-{- key words - instructions - if -}
+notP :: Parser Token
+notP = Not <$ pKeyword "not"
+
+isvoidP :: Parser Token
+isvoidP = IsVoid <$ pKeyword "isvoid"
+
+dotP :: Parser Token
+dotP = Dot <$ symbol "."
+
+atP :: Parser Token
+atP = At <$ symbol "@"
+
+{- if -}
 
 ifP :: Parser Token
 ifP = If <$ pKeyword "if"
@@ -99,7 +111,7 @@ elseP = Else <$ pKeyword "else"
 fiP :: Parser Token
 fiP = Fi <$ pKeyword "fi"
 
-{- key words - instructions - while -}
+{- while -}
 
 whileP :: Parser Token
 whileP = While <$ pKeyword "while"
@@ -110,7 +122,7 @@ loopP = Loop <$ pKeyword "loop"
 poolP :: Parser Token
 poolP = Pool <$ pKeyword "pool"
 
-{- key words - instructions - case -}
+{- case -}
 
 caseP :: Parser Token
 caseP = Case <$ pKeyword "case"
@@ -121,21 +133,19 @@ ofP = Of <$ pKeyword "of"
 esacP :: Parser Token
 esacP = Esac <$ pKeyword "esac"
 
-{- key words - instructions - let -}
+resultsP :: Parser Token
+resultsP = Results <$ symbol "=>"
+
+{- let -}
 
 letP :: Parser Token
 letP = Let <$ pKeyword "let"
 
+assignP :: Parser Token
+assignP = Assign <$ symbol "<-"
+
 inP :: Parser Token
 inP = In <$ pKeyword "in"
-
-{- key words - instructions - others -}
-
-notP :: Parser Token
-notP = Not <$ pKeyword "not"
-
-isvoidP :: Parser Token
-isvoidP = Isvoid <$ pKeyword "isvoid"
 
 {- operators - unary -}
 
@@ -156,34 +166,14 @@ asteriskP = Asterisk <$ symbol "*"
 slashP :: Parser Token
 slashP = Slash <$ symbol "/"
 
-{- operators - relational -}
-
 equalP :: Parser Token
 equalP = Equal <$ symbol "="
-
-lessThanP :: Parser Token
-lessThanP = LessThan <$ symbol "<"
 
 lessEqualP :: Parser Token
 lessEqualP = LessEqual <$ symbol "<="
 
-{- operators - classes -}
-
-dotP :: Parser Token
-dotP = Dot <$ symbol "."
-
-atP :: Parser Token
-atP = At <$ symbol "@"
-
-{- operators - assign -}
-
-assignP :: Parser Token
-assignP = Assign <$ symbol "<-"
-
-{- operators - case results -}
-
-resultsP :: Parser Token
-resultsP = Results <$ symbol "=>"
+lessThanP :: Parser Token
+lessThanP = LessThan <$ symbol "<"
 
 {- code - separators -}
 
@@ -237,6 +227,10 @@ tokenP =
         [ classP
         , inheritsP
         , newP
+        , notP
+        , isvoidP
+        , dotP
+        , atP
         , ifP
         , thenP
         , elseP
@@ -247,22 +241,18 @@ tokenP =
         , caseP
         , ofP
         , esacP
+        , resultsP
         , letP
+        , assignP
         , inP
-        , notP
-        , isvoidP
         , tildeP
         , plusP
         , minusP
         , asteriskP
         , slashP
         , equalP
-        , lessThanP
         , lessEqualP
-        , dotP
-        , atP
-        , assignP
-        , resultsP
+        , lessThanP
         , semiColonP
         , colonP
         , commaP
