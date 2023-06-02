@@ -1,12 +1,12 @@
-module Main (main) where
+module Main where
 
-import Lexer qualified
+import Lexer.Parsec qualified
 import LexerTest (lexerTests)
 import Test.Hspec (Spec, describe, hspec)
 
 tests :: Spec
 tests = do
-    describe "Lexer" $ lexerTests Lexer.tokenize
+    describe "Lexer.Parsec" $ lexerTests Lexer.Parsec.tokenize
 
 main :: IO ()
 main = hspec $ do

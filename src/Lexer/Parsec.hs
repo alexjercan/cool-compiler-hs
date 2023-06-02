@@ -1,6 +1,6 @@
 {-# LANGUAGE OverloadedStrings #-}
 
-module Lexer where
+module Lexer.Parsec where
 
 import Data.Either (fromRight)
 import Data.Text (Text)
