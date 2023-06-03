@@ -2,7 +2,20 @@ module Token where
 
 import Data.Char (isAlphaNum)
 
-type Tokenizer = String -> [Token]
+type Tokenizer = String -> [TokenInfo]
+
+data TokenInfo = TokenInfo
+    { token :: Token
+    , offset :: Int
+    }
+    deriving (Show, Eq)
+
+data Error
+    = StringConstantTooLong
+    | StringContainsNull
+    | StringUnterminated
+    | EofInString
+    deriving (Show, Eq)
 
 data Token
     = Class
@@ -46,6 +59,7 @@ data Token
     | String String
     | Type String
     | Ident String
+    | Illegal Error
     deriving (Show, Eq)
 
 isIdentChar :: Char -> Bool
