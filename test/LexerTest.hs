@@ -26,7 +26,10 @@ lexerTests tokenize = do
     testCase tokenize
     testBlock tokenize
     testStringSpecialChars tokenize
+    testBig tokenize
     testErrorString tokenize
+    testErrorComment tokenize
+    testInvalidChar tokenize
 
 testClass :: Tokenizer -> Spec
 testClass tokenize = do
@@ -158,3 +161,24 @@ testErrorString tokenize = do
             tis !! 13 `shouldBe` TokenInfo (Illegal StringContainsNull) 1081
             tis !! 19 `shouldBe` TokenInfo (Illegal StringUnterminated) 1117
             tis !! 25 `shouldBe` TokenInfo (Illegal EofInString) 1154
+
+testErrorComment :: Tokenizer -> Spec
+testErrorComment tokenize = do
+    describe "Lexer" $ do
+        it "should handle error comment" $ do
+            let tis = tokenize (unlines ["class A {", "    *)", "", "    x : Int;", "", "    (* some (* comment *)", "};"])
+            let ts = tokens tis
+            ts `shouldBe` [Class, Type "A", LeftSquirly, Illegal UnmatchedComment, Ident "x", Colon, Type "Int", SemiColon, Illegal EofInComment]
+            tis !! 3 `shouldBe` TokenInfo (Illegal UnmatchedComment) 14
+            tis !! 8 `shouldBe` TokenInfo (Illegal EofInComment) 36
+
+
+
+testInvalidChar :: Tokenizer -> Spec
+testInvalidChar tokenize = do
+    describe "Lexer" $ do
+        it "should handle error invalid char" $ do
+            let tis = tokenize (unlines ["class A {", "    x : Int; #", "};"])
+            let ts = tokens tis
+            ts `shouldBe` [Class, Type "A", LeftSquirly, Ident "x", Colon, Type "Int", SemiColon, Illegal $ InvalidChar '#', RightSquirly, SemiColon]
+            tis !! 7 `shouldBe` TokenInfo (Illegal $ InvalidChar '#') 23

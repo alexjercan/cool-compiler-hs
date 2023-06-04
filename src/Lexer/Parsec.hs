@@ -6,7 +6,7 @@ import Data.Either (fromRight)
 import Data.Text (Text)
 import Data.Text qualified as T
 import Data.Void (Void)
-import Text.Megaparsec (Parsec, takeWhileP, choice, eof, getOffset, many, manyTill, parse, anySingle)
+import Text.Megaparsec (Parsec, takeWhileP, choice, eof, getOffset, many, manyTill, parse, anySingle, empty)
 import Text.Megaparsec.Char (alphaNumChar, char, lowerChar, space1, upperChar)
 import Text.Megaparsec.Char.Lexer qualified as L
 import Token
@@ -14,7 +14,7 @@ import Token
 type Parser = Parsec Void Text
 
 tokenize :: Tokenizer
-tokenize = fromRight [] . parse tokensP "" . T.pack
+tokenize = filter ((/= BlockComment) . token) . fromRight [] . parse tokensP "" . T.pack
   where
     tokensP = sc *> many nextTokenItem <* eof
 
@@ -34,6 +34,7 @@ nextToken =
         , Tilde <$ symbol "~"
         , Plus <$ symbol "+"
         , Minus <$ symbol "-"
+        , Illegal UnmatchedComment <$ symbol "*)"
         , Asterisk <$ symbol "*"
         , Slash <$ symbol "/"
         , Equal <$ symbol "="
@@ -42,14 +43,16 @@ nextToken =
         , SemiColon <$ symbol ";"
         , Colon <$ symbol ":"
         , Comma <$ symbol ","
+        , symbol "(*" *> commentP
         , LeftParen <$ symbol "("
         , RightParen <$ symbol ")"
         , LeftSquirly <$ symbol "{"
         , RightSquirly <$ symbol "}"
         , Integer <$> numberP
-        , lexeme stringP
+        , char '\"' *> stringP
         , Type <$> typeP
         , stringToToken <$> identP
+        , Illegal . InvalidChar <$> anySingle <* sc
         ]
 
 numberP :: Parser Integer
@@ -86,7 +89,7 @@ stringToken _ = error "stringToken: impossible"
 
 
 stringP :: Parser Token
-stringP = char '\"' *> stringToken (String "")
+stringP = lexeme $ stringToken (String "")
 
 typeP :: Parser String
 typeP = lexeme (T.unpack <$> (T.cons <$> upperChar <*> takeWhileP Nothing isIdentChar))
@@ -94,12 +97,26 @@ typeP = lexeme (T.unpack <$> (T.cons <$> upperChar <*> takeWhileP Nothing isIden
 identP :: Parser String
 identP = lexeme (T.unpack <$> (T.cons <$> lowerChar <*> takeWhileP Nothing isIdentChar))
 
+commentBlockToken :: Int -> Token -> Parser Token
+commentBlockToken _ tok@(Illegal _) = return tok
+commentBlockToken i BlockComment =
+        choice
+            [ symbol "*)" *> if i == 0 then return BlockComment else commentBlockToken (i-1) BlockComment
+            , Illegal EofInComment <$ eof
+            , symbol "(*" >> commentBlockToken (i+1) BlockComment
+            , anySingle >> commentBlockToken i BlockComment
+            ]
+commentBlockToken _ _ = error "commentBlockToken: impossible"
+
+commentP :: Parser Token
+commentP = lexeme $ commentBlockToken 0 BlockComment
+
 sc :: Parser ()
 sc =
     L.space
         space1
         (L.skipLineComment "--")
-        (L.skipBlockCommentNested "(*" "*)")
+        empty
 
 lexeme :: Parser a -> Parser a
 lexeme = L.lexeme sc

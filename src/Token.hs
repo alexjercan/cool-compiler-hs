@@ -15,6 +15,9 @@ data Error
     | StringContainsNull
     | StringUnterminated
     | EofInString
+    | UnmatchedComment
+    | EofInComment
+    | InvalidChar Char
     deriving (Show, Eq)
 
 data Token
@@ -60,6 +63,7 @@ data Token
     | Type String
     | Ident String
     | Illegal Error
+    | BlockComment
     deriving (Show, Eq)
 
 isIdentChar :: Char -> Bool
