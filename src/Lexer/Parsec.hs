@@ -2,7 +2,6 @@
 
 module Lexer.Parsec where
 
-import Data.Either (fromRight)
 import Data.Text (Text)
 import Data.Text qualified as T
 import Data.Void (Void)
@@ -14,9 +13,16 @@ import Token
 type Parser = Parsec Void Text
 
 tokenize :: Tokenizer
-tokenize = filter ((/= BlockComment) . token) . fromRight [] . parse tokensP "" . T.pack
-  where
-    tokensP = sc *> many nextTokenItem <* eof
+tokenize = tokenizeFromFile ""
+
+tokenizeFromFile :: String -> Tokenizer
+tokenizeFromFile fn s = case parse (sc *> many nextTokenItem <* eof) fn $ T.pack s of
+    Left e -> error $ "Lexer should never fail" ++ show e
+    Right tis ->
+        let illegalTokens = filter isIllegal tis
+         in if null illegalTokens
+                then Right $ filter ((/= BlockComment) . token) tis
+                else Left $ map (formatError fn s) illegalTokens
 
 nextTokenItem :: Parser TokenInfo
 nextTokenItem = do

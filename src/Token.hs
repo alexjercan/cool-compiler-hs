@@ -2,7 +2,7 @@ module Token where
 
 import Data.Char (isAlphaNum)
 
-type Tokenizer = String -> [TokenInfo]
+type Tokenizer = String -> Either [String] [TokenInfo]
 
 data TokenInfo = TokenInfo
     { token :: Token
@@ -18,7 +18,17 @@ data Error
     | UnmatchedComment
     | EofInComment
     | InvalidChar Char
-    deriving (Show, Eq, Ord)
+    deriving (Eq, Ord)
+
+instance Show Error where
+  show :: Error -> String
+  show StringConstantTooLong = "String constant too long"
+  show StringContainsNull = "String contains null character"
+  show StringUnterminated = "Unterminated string constant"
+  show EofInString = "EOF in string constant"
+  show UnmatchedComment = "Unmatched *)"
+  show EofInComment = "EOF in comment"
+  show (InvalidChar c) = "Invalid character: " ++ [c]
 
 data Token
     = Class
@@ -90,3 +100,24 @@ stringToToken "in" = In
 stringToToken "true" = Boolean True
 stringToToken "false" = Boolean False
 stringToToken x = Ident x
+
+isIllegal :: TokenInfo -> Bool
+isIllegal (TokenInfo (Illegal _) _) = True
+isIllegal _ = False
+
+offsetToLineColumn :: String -> Int -> (Int, Int)
+offsetToLineColumn str offset =
+    let linesList = lines str
+        (line, column) = go offset linesList 1
+     in (line, column)
+  where
+    go _ [] _ = (0, 0)
+    go n (l : ls) line
+        | n < length l = (line, n + 1)
+        | otherwise = go (n - length l - 1) ls (line + 1)
+
+formatError :: String -> String -> TokenInfo -> String
+formatError fn s (TokenInfo (Illegal err) pos) =
+    let (l, c) = offsetToLineColumn s pos
+     in show fn ++ ", " ++ "line " ++ show l ++ ":" ++ show c ++ ", Lexical error: " ++ show err
+formatError _ _ _ = error "formatError: impossible"
