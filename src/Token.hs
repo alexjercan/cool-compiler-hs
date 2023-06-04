@@ -18,7 +18,7 @@ data Error
     | UnmatchedComment
     | EofInComment
     | InvalidChar Char
-    deriving (Show, Eq)
+    deriving (Show, Eq, Ord)
 
 data Token
     = Class
@@ -64,7 +64,7 @@ data Token
     | Ident String
     | Illegal Error
     | BlockComment
-    deriving (Show, Eq)
+    deriving (Show, Eq, Ord)
 
 isIdentChar :: Char -> Bool
 isIdentChar = (||) <$> isAlphaNum <*> (== '_')

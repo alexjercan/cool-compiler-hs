@@ -3,7 +3,7 @@
 module LexerTest where
 
 import Test.Hspec (Spec, describe, it, shouldBe)
-import Token (Token (..), TokenInfo (..), Tokenizer, Error (..))
+import Token (Error (..), Token (..), TokenInfo (..), Tokenizer)
 
 tokens :: [TokenInfo] -> [Token]
 tokens = map token
@@ -171,8 +171,6 @@ testErrorComment tokenize = do
             ts `shouldBe` [Class, Type "A", LeftSquirly, Illegal UnmatchedComment, Ident "x", Colon, Type "Int", SemiColon, Illegal EofInComment]
             tis !! 3 `shouldBe` TokenInfo (Illegal UnmatchedComment) 14
             tis !! 8 `shouldBe` TokenInfo (Illegal EofInComment) 36
-
-
 
 testInvalidChar :: Tokenizer -> Spec
 testInvalidChar tokenize = do

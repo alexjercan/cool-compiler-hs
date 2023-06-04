@@ -6,14 +6,14 @@ import Token
 
 offsetToLineColumn :: String -> Int -> (Int, Int)
 offsetToLineColumn str offset =
-  let linesList = lines str
-      (line, column) = go offset linesList 1
-  in (line, column)
+    let linesList = lines str
+        (line, column) = go offset linesList 1
+     in (line, column)
   where
     go _ [] _ = (0, 0)
-    go n (l:ls) line
-      | n < length l = (line, n + 1)
-      | otherwise = go (n - length l - 1) ls (line + 1)
+    go n (l : ls) line
+        | n < length l = (line, n + 1)
+        | otherwise = go (n - length l - 1) ls (line + 1)
 
 formatError :: String -> TokenInfo -> String
 formatError input (TokenInfo (Illegal err) pos) = "Lexer Error: " ++ show err ++ " at " ++ show (offsetToLineColumn input pos)

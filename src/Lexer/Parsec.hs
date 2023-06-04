@@ -6,7 +6,7 @@ import Data.Either (fromRight)
 import Data.Text (Text)
 import Data.Text qualified as T
 import Data.Void (Void)
-import Text.Megaparsec (Parsec, takeWhileP, choice, eof, getOffset, many, manyTill, parse, anySingle, empty)
+import Text.Megaparsec (Parsec, anySingle, choice, empty, eof, getOffset, many, manyTill, parse, takeWhileP)
 import Text.Megaparsec.Char (alphaNumChar, char, lowerChar, space1, upperChar)
 import Text.Megaparsec.Char.Lexer qualified as L
 import Token
@@ -68,25 +68,24 @@ stringToken (String s)
             , Illegal EofInString <$ eof
             , Illegal StringUnterminated <$ char '\n'
             , Illegal StringContainsNull <$ char '\0' <* consume
-            , charEscaped >>= stringToken . String . (:s)
-            , anySingle >>= stringToken . String . (:s)
+            , charEscaped >>= stringToken . String . (: s)
+            , anySingle >>= stringToken . String . (: s)
             ]
-    where
-        consume = manyTill anySingle (char '\"')
-        charEscaped =
-            char '\\'
-                *> choice
-                    [ char '\"'
-                    , char '\\'
-                    , char '\n'
-                    , '\n' <$ char 'n'
-                    , '\t' <$ char 't'
-                    , '\b' <$ char 'b'
-                    , '\f' <$ char 'f'
-                    , alphaNumChar
-                    ]
+  where
+    consume = manyTill anySingle (char '\"')
+    charEscaped =
+        char '\\'
+            *> choice
+                [ char '\"'
+                , char '\\'
+                , char '\n'
+                , '\n' <$ char 'n'
+                , '\t' <$ char 't'
+                , '\b' <$ char 'b'
+                , '\f' <$ char 'f'
+                , alphaNumChar
+                ]
 stringToken _ = error "stringToken: impossible"
-
 
 stringP :: Parser Token
 stringP = lexeme $ stringToken (String "")
@@ -100,12 +99,12 @@ identP = lexeme (T.unpack <$> (T.cons <$> lowerChar <*> takeWhileP Nothing isIde
 commentBlockToken :: Int -> Token -> Parser Token
 commentBlockToken _ tok@(Illegal _) = return tok
 commentBlockToken i BlockComment =
-        choice
-            [ symbol "*)" *> if i == 0 then return BlockComment else commentBlockToken (i-1) BlockComment
-            , Illegal EofInComment <$ eof
-            , symbol "(*" >> commentBlockToken (i+1) BlockComment
-            , anySingle >> commentBlockToken i BlockComment
-            ]
+    choice
+        [ symbol "*)" *> if i == 0 then return BlockComment else commentBlockToken (i - 1) BlockComment
+        , Illegal EofInComment <$ eof
+        , symbol "(*" >> commentBlockToken (i + 1) BlockComment
+        , anySingle >> commentBlockToken i BlockComment
+        ]
 commentBlockToken _ _ = error "commentBlockToken: impossible"
 
 commentP :: Parser Token

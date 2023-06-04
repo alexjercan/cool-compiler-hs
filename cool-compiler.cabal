@@ -59,7 +59,8 @@ library
     import:           warnings
 
     -- Modules exported by the library.
-    exposed-modules:  Token, Lexer.Parsec
+    exposed-modules:  Token, Lexer.Parsec,
+                      AST, Parser.Parsec
 
     -- Modules included in this library but not exported.
     -- other-modules:
@@ -110,7 +111,7 @@ test-suite cool-compiler-test
     default-language: GHC2021
 
     -- Modules included in this executable, other than Main.
-    other-modules: LexerTest
+    other-modules: LexerTest, ParserTest
 
     -- LANGUAGE extensions used by modules in this package.
     -- other-extensions:
