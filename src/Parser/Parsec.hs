@@ -112,7 +112,7 @@ termP =
             loop <- tokenP Loop >> expressionP <* tokenP Pool
             return $ WhileStatement while loop
         , do
-            exprs <- between (tokenP LeftSquirly) (tokenP RightSquirly) $ expressionP `sepEndBy` tokenP SemiColon
+            exprs <- between (tokenP LeftSquirly) (tokenP RightSquirly) $ expressionP `sepEndBy1` tokenP SemiColon
             return $ BlockStatement exprs
         , do
             vars <- tokenP Let >> variableDefinitionP `sepBy1` tokenP Comma
@@ -151,8 +151,6 @@ termP =
             BoolLiteral <$> booleanP
         , do
             TypeStatement <$> typeP
-        , do
-            IllegalStatement <$ anySingle
         ]
 
 staticDispatch :: Expression -> Expression -> Expression
