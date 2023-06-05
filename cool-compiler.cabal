@@ -71,6 +71,7 @@ library
     -- Other library packages from which modules are imported.
     build-depends:    base ^>=4.17.1.0,
                       text,
+                      parser-combinators,
                       megaparsec,
 
     -- Directories containing source files.

@@ -2,9 +2,9 @@
 
 module LexerTest where
 
+import Data.Either (fromRight)
 import Test.Hspec (Spec, describe, it, shouldBe)
 import Token (Token (..), TokenInfo (..), Tokenizer)
-import Data.Either (fromRight)
 
 tokens :: [TokenInfo] -> [Token]
 tokens = map token
@@ -156,25 +156,30 @@ testErrorString tokenize = do
     describe "Lexer" $ do
         it "should handle error string" $ do
             tokenize (unlines ["class A {", "    long : String <- \"lRLRZEEyGcL1vXxQIke5GzPdnalgabCDWDkohxom3vy2B3RfieCvgfqjMEkP9nxcQE0CdSFpZnlohvhDwr7aHRBlXbovc7YpPEKCLUxprxMsUIP4oerysNX6NNvv4OznWgi90lQPTqH1T3flaLUEdOo96RVsikngIJklXvPItGHYza6vkdUWtbahqi8Pewfq3uV1dKfEAnyuHc5XGqFEsAmEfbcYOLr4ADNpOqxWdRwISb14OWzZUA7MHLqtcv4zpkqN6sf4JaTtIMsu7tfYe6UfVkGjD2nQdE8kpq5OmpfmD0Znwh2Pab4EfAffN9LabBbRqEFlTNkhHpKKOPA7MenY1761UGsq4ia0wsKnDIFnCumudFUFjigEiTob96sjn66eDVK0ETzwGR4acif2T8QsFwCv8zNQDdPABbVzUI5qtiYZR2i2f3eVgyzU6N3NCHg6dwDDHfTN8hlaGdRZdTM7kHHYXvNGiNtvagJwTLml2arYYGnkn02ci4vm6BkRdiog6OCbTr3Ysqvbee5CjsWXjflSuiMyNiw1ZNvWJtmU0bObYAj5YTPwVPH5IjejXN8c3eTRfMpOYhTkTpY9nQoi2S5FRZKTFPK99X4l5AqaR7Fx3IfC7WOn5tJnhkbmFFoUnyPlrXGltNTodBYTwNCgWTTdaRIV7ulg6ttxTYd5VJQyVBk9kJei5NIjuIrwQ4xovu0ODIDVMZNIfO1KiaN81XwHx4JPchHBkGMIn5cHsfLMdXdV8AfzLV1lPveSg1MuBZEvWUG9prYFLcQIJcWqDfnZgHw1Yx4Iy5rA4kGi9EaPEMpJxGARpRSm2TawQfRnenZw8FpMYDCUri2RTB20fSfkGHDzET8EBFSU7lbAiBOluWSSyHkr3eU6JJuld83Nbp5iNFQV7VNL4MOReVJkHJPvoEbsQdxYAJQG3EBC8uNf6YXVCbDRBdEXXGcOXNLtBTS7t07SKc6iScxOTduV5K9v38vs3YmqpOFVObZ5TfMnoUngX69IzCMMsL9Ad\";", "    null : String <- \"a\0b\";", "    unterminated : String <- \"where to?", "    ;"] ++ "    eof : String <- \"nirvana")
-                `shouldBe` Left [ "\"\", line 2:22, Lexical error: String constant too long"
-                                , "\"\", line 3:22, Lexical error: String contains null character"
-                                , "\"\", line 4:30, Lexical error: Unterminated string constant"
-                                , "\"\", line 6:21, Lexical error: EOF in string constant"
-                                ]
+                `shouldBe` Left
+                    [ "\"\", line 2:22, Lexical error: String constant too long"
+                    , "\"\", line 3:22, Lexical error: String contains null character"
+                    , "\"\", line 4:30, Lexical error: Unterminated string constant"
+                    , "\"\", line 6:21, Lexical error: EOF in string constant"
+                    ]
 
 testErrorComment :: Tokenizer -> Spec
 testErrorComment tokenize = do
     describe "Lexer" $ do
-        it "should handle error comment" $ do
-            tokenize (unlines ["class A {", "    *)", "", "    x : Int;", "", "    (* some (* comment *)", "};"])
-            `shouldBe` Left [ "\"\", line 2:5, Lexical error: Unmatched *)"
-                            , "\"\", line 6:5, Lexical error: EOF in comment"
-                            ]
+        it "should handle error comment" $
+            do
+                tokenize (unlines ["class A {", "    *)", "", "    x : Int;", "", "    (* some (* comment *)", "};"])
+                `shouldBe` Left
+                    [ "\"\", line 2:5, Lexical error: Unmatched *)"
+                    , "\"\", line 6:5, Lexical error: EOF in comment"
+                    ]
 
 testInvalidChar :: Tokenizer -> Spec
 testInvalidChar tokenize = do
     describe "Lexer" $ do
-        it "should handle error invalid char" $ do
-            tokenize (unlines ["class A {", "    x : Int; #", "};"])
-            `shouldBe` Left [ "\"\", line 2:14, Lexical error: Invalid character: #"
-                            ]
+        it "should handle error invalid char" $
+            do
+                tokenize (unlines ["class A {", "    x : Int; #", "};"])
+                `shouldBe` Left
+                    [ "\"\", line 2:14, Lexical error: Invalid character: #"
+                    ]

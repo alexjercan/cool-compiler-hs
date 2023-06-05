@@ -21,14 +21,14 @@ data Error
     deriving (Eq, Ord)
 
 instance Show Error where
-  show :: Error -> String
-  show StringConstantTooLong = "String constant too long"
-  show StringContainsNull = "String contains null character"
-  show StringUnterminated = "Unterminated string constant"
-  show EofInString = "EOF in string constant"
-  show UnmatchedComment = "Unmatched *)"
-  show EofInComment = "EOF in comment"
-  show (InvalidChar c) = "Invalid character: " ++ [c]
+    show :: Error -> String
+    show StringConstantTooLong = "String constant too long"
+    show StringContainsNull = "String contains null character"
+    show StringUnterminated = "Unterminated string constant"
+    show EofInString = "EOF in string constant"
+    show UnmatchedComment = "Unmatched *)"
+    show EofInComment = "EOF in comment"
+    show (InvalidChar c) = "Invalid character: " ++ [c]
 
 data Token
     = Class

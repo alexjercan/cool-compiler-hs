@@ -19,8 +19,10 @@ data Formal = Formal String String
     deriving (Show, Eq)
 
 data Expression
-    = Dispatch (Maybe String) String [Expression]
-    | MethodCall String [Expression]
+    = StaticDispatch Expression String           -- @
+    | TypeStatement String                       -- @A
+
+    | MethodCall (Maybe Expression) (Maybe String) String [Expression]
     | IfStatement Expression Expression Expression
     | WhileStatement Expression Expression
     | BlockStatement [Expression]
@@ -40,9 +42,10 @@ data Expression
     | AssignStatement String Expression
     | ParenStatement Expression
     | IdentStatement String
-    | IntStatement Int
-    | StringStatement String
-    | BoolStatement Bool
+    | IntegerLiteral Integer
+    | StringLiteral String
+    | BoolLiteral Bool
+    | IllegalStatement
     deriving (Show, Eq)
 
 data VariableDefinition = VariableDefinition String String (Maybe Expression)
