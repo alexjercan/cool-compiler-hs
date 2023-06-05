@@ -5,7 +5,7 @@ module Parser.Parsec where
 import AST
 import Control.Monad.Combinators.Expr (Operator (..), makeExprParser)
 import Data.Void (Void)
-import Text.Megaparsec (Parsec, anySingle, between, choice, optional, parse, satisfy, sepBy, sepBy1, sepEndBy, sepEndBy1, try)
+import Text.Megaparsec (MonadParsec (lookAhead), Parsec, anySingle, between, choice, optional, parse, satisfy, sepBy, sepBy1, sepEndBy, sepEndBy1, try)
 import Token
 
 type Parser = Parsec Void [Token]
@@ -62,39 +62,6 @@ caseOfDefinitionP = do
     expr <- tokenP Results >> expressionP
     return $ CaseOfDefinition ident typ expr
 
-tokenP :: Token -> Parser Token
-tokenP t = satisfy (== t)
-
-numberP :: Parser Integer
-numberP = try $ do
-    anySingle >>= \case
-        Integer i -> return i
-        _ -> fail "Expected integer"
-
-stringP :: Parser String
-stringP = try $ do
-    anySingle >>= \case
-        String s -> return s
-        _ -> fail "Expected string"
-
-booleanP :: Parser Bool
-booleanP = try $ do
-    anySingle >>= \case
-        Boolean b -> return b
-        _ -> fail "Expected boolean"
-
-identP :: Parser String
-identP = try $ do
-    anySingle >>= \case
-        Ident ident -> return ident
-        _ -> fail "Expected identifier"
-
-typeP :: Parser String
-typeP = try $ do
-    anySingle >>= \case
-        Type typ -> return typ
-        _ -> fail "Expected type"
-
 termP :: Parser Expression
 termP =
     choice
@@ -149,32 +116,28 @@ termP =
             StringLiteral <$> stringP
         , do
             BoolLiteral <$> booleanP
-        , do
-            TypeStatement <$> typeP
         ]
 
-staticDispatch :: Expression -> Expression -> Expression
-staticDispatch expr (TypeStatement typ) = StaticDispatch expr typ
-staticDispatch _ _ = IllegalStatement
-
-dispatchStatement :: Expression -> Expression -> Expression
-dispatchStatement (StaticDispatch expr ident) (MethodCall _ _ ident' formals) = MethodCall (Just expr) (Just ident) ident' formals
-dispatchStatement expr (MethodCall _ _ ident formals) = MethodCall (Just expr) Nothing ident formals
-dispatchStatement _ _ = IllegalStatement
+staticDispatchP :: Parser (Expression -> Expression -> Expression)
+staticDispatchP = do
+    typ <- optional $ tokenP At >> typeP
+    tokenP Dot >> lookAhead termP >>= \case
+        (MethodCall _ _ ident formals) -> return $ \lhs _ -> MethodCall (Just lhs) typ ident formals
+        _ -> fail "Expected method call"
 
 expressionP :: Parser Expression
 expressionP = makeExprParser termP table
   where
     table =
         [
-            [ InfixL (tokenP At >> return staticDispatch)
+            [ InfixL staticDispatchP
             ]
-        ,   [ InfixL (tokenP Dot >> return dispatchStatement)
-            ]
-        ,   [ InfixL (tokenP Asterisk >> return MulStatement)
+        ,
+            [ InfixL (tokenP Asterisk >> return MulStatement)
             , InfixL (tokenP Slash >> return DivStatement)
             ]
-        , [ InfixL (tokenP Plus >> return AddStatement)
+        ,
+            [ InfixL (tokenP Plus >> return AddStatement)
             , InfixL (tokenP Minus >> return SubStatement)
             ]
         ,
@@ -183,3 +146,36 @@ expressionP = makeExprParser termP table
             , InfixL (tokenP LessEqual >> return LessThanOrEqualStatement)
             ]
         ]
+
+tokenP :: Token -> Parser Token
+tokenP t = satisfy (== t)
+
+numberP :: Parser Integer
+numberP = try $ do
+    anySingle >>= \case
+        Integer i -> return i
+        _ -> fail "Expected integer"
+
+stringP :: Parser String
+stringP = try $ do
+    anySingle >>= \case
+        String s -> return s
+        _ -> fail "Expected string"
+
+booleanP :: Parser Bool
+booleanP = try $ do
+    anySingle >>= \case
+        Boolean b -> return b
+        _ -> fail "Expected boolean"
+
+identP :: Parser String
+identP = try $ do
+    anySingle >>= \case
+        Ident ident -> return ident
+        _ -> fail "Expected identifier"
+
+typeP :: Parser String
+typeP = try $ do
+    anySingle >>= \case
+        Type typ -> return typ
+        _ -> fail "Expected type"

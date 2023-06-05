@@ -19,10 +19,7 @@ data Formal = Formal String String
     deriving (Show, Eq)
 
 data Expression
-    = StaticDispatch Expression String           -- @
-    | TypeStatement String                       -- @A
-
-    | MethodCall (Maybe Expression) (Maybe String) String [Expression]
+    = MethodCall (Maybe Expression) (Maybe String) String [Expression]
     | IfStatement Expression Expression Expression
     | WhileStatement Expression Expression
     | BlockStatement [Expression]
