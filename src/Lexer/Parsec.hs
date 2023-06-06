@@ -22,7 +22,7 @@ tokenizeFromFile fn s = case parse (sc *> many nextTokenItem <* eof) fn $ T.pack
         let illegalTokens = filter isIllegal tis
          in if null illegalTokens
                 then Right $ filter ((/= BlockComment) . token) tis
-                else Left $ map (formatError fn s) illegalTokens
+                else Left $ map (lexicalError fn s) illegalTokens
 
 nextTokenItem :: Parser TokenInfo
 nextTokenItem = do

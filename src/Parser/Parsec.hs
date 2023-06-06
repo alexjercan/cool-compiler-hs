@@ -8,7 +8,7 @@ import Data.Void (Void)
 import Text.Megaparsec (MonadParsec (lookAhead), Parsec, anySingle, between, choice, optional, parse, satisfy, sepBy, sepBy1, sepEndBy, sepEndBy1, try)
 import Token
 
-type Parser = Parsec Void [Token]
+type Parser = Parsec Void [TokenInfo]
 
 ast :: Ast
 ast s = case parse programP "" s of
@@ -147,35 +147,35 @@ expressionP = makeExprParser termP table
             ]
         ]
 
-tokenP :: Token -> Parser Token
-tokenP t = satisfy (== t)
+tokenP :: Token -> Parser TokenInfo
+tokenP t = satisfy ((== t) . token)
 
-numberP :: Parser Integer
+numberP :: Parser TokenInfo
 numberP = try $ do
     anySingle >>= \case
-        Integer i -> return i
+        t@(TokenInfo (Integer _) _) -> return t
         _ -> fail "Expected integer"
 
-stringP :: Parser String
+stringP :: Parser TokenInfo
 stringP = try $ do
     anySingle >>= \case
-        String s -> return s
+        t@(TokenInfo (String _) _) -> return t
         _ -> fail "Expected string"
 
-booleanP :: Parser Bool
+booleanP :: Parser TokenInfo
 booleanP = try $ do
     anySingle >>= \case
-        Boolean b -> return b
+        t@(TokenInfo (Boolean _) _) -> return t
         _ -> fail "Expected boolean"
 
-identP :: Parser String
+identP :: Parser TokenInfo
 identP = try $ do
     anySingle >>= \case
-        Ident ident -> return ident
+        t@(TokenInfo (Ident _) _) -> return t
         _ -> fail "Expected identifier"
 
-typeP :: Parser String
+typeP :: Parser TokenInfo
 typeP = try $ do
     anySingle >>= \case
-        Type typ -> return typ
+        t@(TokenInfo (Type _) _) -> return t
         _ -> fail "Expected type"

@@ -2,30 +2,30 @@ module AST where
 
 import Token
 
-type Ast = [Token] -> Either [String] Program
+type Ast = [TokenInfo] -> Either [String] Program
 
 newtype Program = Program [ClassDefinition]
     deriving (Show, Eq)
 
-data ClassDefinition = ClassDefinition String (Maybe String) [FieldDefinition]
+data ClassDefinition = ClassDefinition TokenInfo (Maybe TokenInfo) [FieldDefinition]
     deriving (Show, Eq)
 
 data FieldDefinition
-    = MethodDefinition String [Formal] String Expression
-    | AttributeDefinition String String (Maybe Expression)
+    = MethodDefinition TokenInfo [Formal] TokenInfo Expression
+    | AttributeDefinition TokenInfo TokenInfo (Maybe Expression)
     deriving (Show, Eq)
 
-data Formal = Formal String String
+data Formal = Formal TokenInfo TokenInfo
     deriving (Show, Eq)
 
 data Expression
-    = MethodCall (Maybe Expression) (Maybe String) String [Expression]
+    = MethodCall (Maybe Expression) (Maybe TokenInfo) TokenInfo [Expression]
     | IfStatement Expression Expression Expression
     | WhileStatement Expression Expression
     | BlockStatement [Expression]
     | LetStatement [VariableDefinition] Expression
     | CaseStatement Expression [CaseOfDefinition]
-    | NewStatement String
+    | NewStatement TokenInfo
     | NegationStatement Expression
     | IsVoidStatement Expression
     | MulStatement Expression Expression
@@ -36,17 +36,17 @@ data Expression
     | LessThanOrEqualStatement Expression Expression
     | EqualStatement Expression Expression
     | NotStatement Expression
-    | AssignStatement String Expression
+    | AssignStatement TokenInfo Expression
     | ParenStatement Expression
-    | IdentStatement String
-    | IntegerLiteral Integer
-    | StringLiteral String
-    | BoolLiteral Bool
+    | IdentStatement TokenInfo
+    | IntegerLiteral TokenInfo
+    | StringLiteral TokenInfo
+    | BoolLiteral TokenInfo
     | IllegalStatement
     deriving (Show, Eq)
 
-data VariableDefinition = VariableDefinition String String (Maybe Expression)
+data VariableDefinition = VariableDefinition TokenInfo TokenInfo (Maybe Expression)
     deriving (Show, Eq)
 
-data CaseOfDefinition = CaseOfDefinition String String Expression
+data CaseOfDefinition = CaseOfDefinition TokenInfo TokenInfo Expression
     deriving (Show, Eq)

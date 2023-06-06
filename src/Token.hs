@@ -8,7 +8,7 @@ data TokenInfo = TokenInfo
     { token :: Token
     , offset :: Int
     }
-    deriving (Show, Eq)
+    deriving (Show, Eq, Ord)
 
 data Error
     = StringConstantTooLong
@@ -116,8 +116,11 @@ offsetToLineColumn str offset =
         | n < length l = (line, n + 1)
         | otherwise = go (n - length l - 1) ls (line + 1)
 
-formatError :: String -> String -> TokenInfo -> String
-formatError fn s (TokenInfo (Illegal err) pos) =
+formatError :: String -> String -> Int -> String
+formatError fn s pos =
     let (l, c) = offsetToLineColumn s pos
-     in show fn ++ ", " ++ "line " ++ show l ++ ":" ++ show c ++ ", Lexical error: " ++ show err
-formatError _ _ _ = error "formatError: impossible"
+     in show fn ++ ", " ++ "line " ++ show l ++ ":" ++ show c
+
+lexicalError :: String -> String -> TokenInfo -> String
+lexicalError fn s (TokenInfo (Illegal err) pos) = formatError fn s pos ++ ", Lexical error: " ++ show err
+lexicalError _ _ _ = error "formatError: impossible"
