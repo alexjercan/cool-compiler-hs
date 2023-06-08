@@ -5,20 +5,27 @@ module Parser.Parsec where
 import AST
 import Control.Monad.Combinators.Expr (Operator (..), makeExprParser)
 import Data.Void (Void)
-import Text.Megaparsec (MonadParsec (lookAhead), Parsec, anySingle, between, choice, optional, parse, satisfy, sepBy, sepBy1, sepEndBy, sepEndBy1, try)
+import Text.Megaparsec (lookAhead, Parsec, anySingle, between, choice, optional, parse, satisfy, sepBy, sepBy1, sepEndBy, sepEndBy1, try, withRecovery, manyTill, (<|>))
 import Token
 
 type Parser = Parsec Void [TokenInfo]
 
 ast :: Ast
 ast s = case parse programP "" s of
-    Left e -> Left $ lines $ show e
-    Right a -> Right a
+    Left e -> Left ["Parser should never fail" ++ show e]
+    Right (Program classes) ->
+        let illegalClasses = filter AST.isIllegal classes
+         in if null illegalClasses
+                then Right $ Program classes
+                else Left $ map show illegalClasses
 
 programP :: Parser Program
-programP = do
-    classes <- sepEndBy classDefinitionP (tokenP SemiColon)
-    return $ Program classes
+programP = Program <$> manyTill classDefinitionP' (tokenP Eof)
+
+classDefinitionP' :: Parser ClassDefinition
+classDefinitionP' = withRecovery recover (classDefinitionP <* tokenP SemiColon)
+  where
+    recover = const $ IllegalStatement <$ manyTill anySingle (tokenP SemiColon <* lookAhead (tokenP Class <|> tokenP Eof))
 
 classDefinitionP :: Parser ClassDefinition
 classDefinitionP = do

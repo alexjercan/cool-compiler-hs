@@ -7,7 +7,9 @@ type Ast = [TokenInfo] -> Either [String] Program
 newtype Program = Program [ClassDefinition]
     deriving (Show, Eq)
 
-data ClassDefinition = ClassDefinition TokenInfo (Maybe TokenInfo) [FieldDefinition]
+data ClassDefinition
+    = ClassDefinition TokenInfo (Maybe TokenInfo) [FieldDefinition]
+    | IllegalStatement
     deriving (Show, Eq)
 
 data FieldDefinition
@@ -42,7 +44,6 @@ data Expression
     | IntegerLiteral TokenInfo
     | StringLiteral TokenInfo
     | BoolLiteral TokenInfo
-    | IllegalStatement
     deriving (Show, Eq)
 
 data VariableDefinition = VariableDefinition TokenInfo TokenInfo (Maybe Expression)
@@ -50,3 +51,7 @@ data VariableDefinition = VariableDefinition TokenInfo TokenInfo (Maybe Expressi
 
 data CaseOfDefinition = CaseOfDefinition TokenInfo TokenInfo Expression
     deriving (Show, Eq)
+
+isIllegal :: ClassDefinition -> Bool
+isIllegal IllegalStatement = True
+isIllegal _ = False

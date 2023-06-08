@@ -31,7 +31,8 @@ instance Show Error where
     show (InvalidChar c) = "Invalid character: " ++ [c]
 
 data Token
-    = Class
+    = Eof
+    | Class
     | Inherits
     | New
     | If
