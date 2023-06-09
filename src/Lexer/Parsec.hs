@@ -13,25 +13,19 @@ import Token
 type Parser = Parsec Void Text
 
 tokenize :: Tokenizer
-tokenize = tokenizeFromFile ""
-
-tokenizeFromFile :: String -> Tokenizer
-tokenizeFromFile fn s = case parse (sc *> many nextTokenItem <* eof) fn $ T.pack s of
-    Left e -> Left ["Lexer should never fail" ++ show e]
-    Right tis ->
-        let illegalTokens = filter isIllegal tis
-         in if null illegalTokens
-                then Right $ filter ((/= BlockComment) . token) tis ++ [TokenInfo Eof (offset $ last tis)]
-                else Left $ map (lexicalError fn s) illegalTokens
-
-nextTokenItem :: Parser TokenInfo
-nextTokenItem = do
-    o <- getOffset
-    tok <- nextToken
-    return $ TokenInfo tok o
+tokenize s = case parse (sc *> many nextToken <* eof) "" $ T.pack s of
+    Left e -> error $ "Lexer should never fail" ++ show e
+    Right tis -> case foldr go ([], []) tis of
+        ([], tokens) -> Right $ tokens ++ [Eof]
+        (errs, _) -> Left errs
+  where
+    go (Illegal ti) (errs, tokens) = (ti : errs, tokens)
+    go (BlockComment _) (errs, tokens) = (errs, tokens)
+    go ti (errs, tokens) = (errs, ti : tokens)
 
 nextToken :: Parser Token
-nextToken =
+nextToken = do
+    o <- getOffset
     choice
         [ Dot <$ symbol "."
         , At <$ symbol "@"
@@ -40,7 +34,7 @@ nextToken =
         , Tilde <$ symbol "~"
         , Plus <$ symbol "+"
         , Minus <$ symbol "-"
-        , Illegal UnmatchedComment <$ symbol "*)"
+        , Illegal (TokenInfo o UnmatchedComment) <$ symbol "*)"
         , Asterisk <$ symbol "*"
         , Slash <$ symbol "/"
         , Equal <$ symbol "="
@@ -49,16 +43,16 @@ nextToken =
         , SemiColon <$ symbol ";"
         , Colon <$ symbol ":"
         , Comma <$ symbol ","
-        , symbol "(*" *> commentP
+        , symbol "(*" *> lexeme (commentBlockToken 0 $ BlockComment $ TokenInfo o ())
         , LeftParen <$ symbol "("
         , RightParen <$ symbol ")"
         , LeftSquirly <$ symbol "{"
         , RightSquirly <$ symbol "}"
-        , Integer <$> numberP
-        , char '\"' *> stringP
-        , Type <$> typeP
-        , stringToToken <$> identP
-        , Illegal . InvalidChar <$> anySingle <* sc
+        , Integer . TokenInfo o <$> numberP
+        , char '\"' *> lexeme (stringToken $ String $ TokenInfo o "")
+        , Type . TokenInfo o <$> typeP
+        , stringToToken . TokenInfo o <$> identP
+        , Illegal . TokenInfo o . InvalidChar <$> anySingle <* sc
         ]
 
 numberP :: Parser Integer
@@ -66,16 +60,16 @@ numberP = lexeme L.decimal
 
 stringToken :: Token -> Parser Token
 stringToken tok@(Illegal _) = return tok
-stringToken (String s)
-    | length s > 1024 = Illegal StringConstantTooLong <$ consume
+stringToken (String (TokenInfo o s))
+    | length s > 1024 = Illegal (TokenInfo o StringConstantTooLong) <$ consume
     | otherwise =
         choice
-            [ String (reverse s) <$ char '\"'
-            , Illegal EofInString <$ eof
-            , Illegal StringUnterminated <$ char '\n'
-            , Illegal StringContainsNull <$ char '\0' <* consume
-            , charEscaped >>= stringToken . String . (: s)
-            , anySingle >>= stringToken . String . (: s)
+            [ String (TokenInfo o (reverse s)) <$ char '\"'
+            , Illegal (TokenInfo o EofInString) <$ eof
+            , Illegal (TokenInfo o StringUnterminated) <$ char '\n'
+            , Illegal (TokenInfo o StringContainsNull) <$ char '\0' <* consume
+            , charEscaped >>= stringToken . String . TokenInfo o . (: s)
+            , anySingle >>= stringToken . String . TokenInfo o . (: s)
             ]
   where
     consume = manyTill anySingle (char '\"')
@@ -93,9 +87,6 @@ stringToken (String s)
                 ]
 stringToken _ = error "stringToken: impossible"
 
-stringP :: Parser Token
-stringP = lexeme $ stringToken (String "")
-
 typeP :: Parser String
 typeP = lexeme (T.unpack <$> (T.cons <$> upperChar <*> takeWhileP Nothing isIdentChar))
 
@@ -104,17 +95,14 @@ identP = lexeme (T.unpack <$> (T.cons <$> lowerChar <*> takeWhileP Nothing isIde
 
 commentBlockToken :: Int -> Token -> Parser Token
 commentBlockToken _ tok@(Illegal _) = return tok
-commentBlockToken i BlockComment =
+commentBlockToken i b@(BlockComment (TokenInfo o _)) =
     choice
-        [ symbol "*)" *> if i == 0 then return BlockComment else commentBlockToken (i - 1) BlockComment
-        , Illegal EofInComment <$ eof
-        , symbol "(*" >> commentBlockToken (i + 1) BlockComment
-        , anySingle >> commentBlockToken i BlockComment
+        [ symbol "*)" *> if i == 0 then return b else commentBlockToken (i - 1) b
+        , Illegal (TokenInfo o EofInComment) <$ eof
+        , symbol "(*" >> commentBlockToken (i + 1) b
+        , anySingle >> commentBlockToken i b
         ]
 commentBlockToken _ _ = error "commentBlockToken: impossible"
-
-commentP :: Parser Token
-commentP = lexeme $ commentBlockToken 0 BlockComment
 
 sc :: Parser ()
 sc =

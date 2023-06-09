@@ -2,32 +2,38 @@ module AST where
 
 import Token
 
-type Ast = [TokenInfo] -> Either [String] Program
+type Ast = [Token] -> Either [TokenInfo ParserError] Program
+
+data ParserError = InvalidParse
+    deriving (Show, Eq)
+
+instance FormatErrorKind ParserError where
+    formatErrorKind fn s (TokenInfo pos err) = formatError fn s pos ++ ", Parser error: " ++ show err
 
 newtype Program = Program [ClassDefinition]
     deriving (Show, Eq)
 
 data ClassDefinition
-    = ClassDefinition TokenInfo (Maybe TokenInfo) [FieldDefinition]
-    | IllegalStatement
+    = ClassDefinition Token (Maybe Token) [FieldDefinition]
+    | IllegalStatement (TokenInfo ParserError)
     deriving (Show, Eq)
 
 data FieldDefinition
-    = MethodDefinition TokenInfo [Formal] TokenInfo Expression
-    | AttributeDefinition TokenInfo TokenInfo (Maybe Expression)
+    = MethodDefinition Token [Formal] Token Expression
+    | AttributeDefinition Token Token (Maybe Expression)
     deriving (Show, Eq)
 
-data Formal = Formal TokenInfo TokenInfo
+data Formal = Formal Token Token
     deriving (Show, Eq)
 
 data Expression
-    = MethodCall (Maybe Expression) (Maybe TokenInfo) TokenInfo [Expression]
+    = MethodCall (Maybe Expression) (Maybe Token) Token [Expression]
     | IfStatement Expression Expression Expression
     | WhileStatement Expression Expression
     | BlockStatement [Expression]
     | LetStatement [VariableDefinition] Expression
     | CaseStatement Expression [CaseOfDefinition]
-    | NewStatement TokenInfo
+    | NewStatement Token
     | NegationStatement Expression
     | IsVoidStatement Expression
     | MulStatement Expression Expression
@@ -38,19 +44,19 @@ data Expression
     | LessThanOrEqualStatement Expression Expression
     | EqualStatement Expression Expression
     | NotStatement Expression
-    | AssignStatement TokenInfo Expression
-    | IdentStatement TokenInfo
-    | IntegerLiteral TokenInfo
-    | StringLiteral TokenInfo
-    | BoolLiteral TokenInfo
+    | AssignStatement Token Expression
+    | IdentStatement Token
+    | IntegerLiteral Token
+    | StringLiteral Token
+    | BoolLiteral Token
     deriving (Show, Eq)
 
-data VariableDefinition = VariableDefinition TokenInfo TokenInfo (Maybe Expression)
+data VariableDefinition = VariableDefinition Token Token (Maybe Expression)
     deriving (Show, Eq)
 
-data CaseOfDefinition = CaseOfDefinition TokenInfo TokenInfo Expression
+data CaseOfDefinition = CaseOfDefinition Token Token Expression
     deriving (Show, Eq)
 
 isIllegal :: ClassDefinition -> Bool
-isIllegal IllegalStatement = True
+isIllegal (IllegalStatement _) = True
 isIllegal _ = False

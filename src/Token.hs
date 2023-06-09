@@ -2,15 +2,15 @@ module Token where
 
 import Data.Char (isAlphaNum)
 
-type Tokenizer = String -> Either [String] [TokenInfo]
+type Tokenizer = String -> Either [TokenInfo LexicalError] [Token]
 
-data TokenInfo = TokenInfo
-    { token :: Token
-    , offset :: Int
+data TokenInfo a = TokenInfo
+    { offset :: Int
+    , value :: a
     }
     deriving (Show, Eq, Ord)
 
-data Error
+data LexicalError
     = StringConstantTooLong
     | StringContainsNull
     | StringUnterminated
@@ -20,8 +20,8 @@ data Error
     | InvalidChar Char
     deriving (Eq, Ord)
 
-instance Show Error where
-    show :: Error -> String
+instance Show LexicalError where
+    show :: LexicalError -> String
     show StringConstantTooLong = "String constant too long"
     show StringContainsNull = "String contains null character"
     show StringUnterminated = "Unterminated string constant"
@@ -29,6 +29,9 @@ instance Show Error where
     show UnmatchedComment = "Unmatched *)"
     show EofInComment = "EOF in comment"
     show (InvalidChar c) = "Invalid character: " ++ [c]
+
+instance FormatErrorKind LexicalError where
+    formatErrorKind fn s (TokenInfo pos err) = formatError fn s pos ++ ", Lexical error: " ++ show err
 
 data Token
     = Eof
@@ -68,43 +71,39 @@ data Token
     | RightParen
     | LeftSquirly
     | RightSquirly
-    | Integer Integer
-    | Boolean Bool
-    | String String
-    | Type String
-    | Ident String
-    | Illegal Error
-    | BlockComment
+    | Integer (TokenInfo Integer)
+    | Boolean (TokenInfo Bool)
+    | String (TokenInfo String)
+    | Type (TokenInfo String)
+    | Ident (TokenInfo String)
+    | Illegal (TokenInfo LexicalError)
+    | BlockComment (TokenInfo ())
     deriving (Show, Eq, Ord)
 
 isIdentChar :: Char -> Bool
 isIdentChar = (||) <$> isAlphaNum <*> (== '_')
 
-stringToToken :: String -> Token
-stringToToken "class" = Class
-stringToToken "inherits" = Inherits
-stringToToken "new" = New
-stringToToken "not" = Not
-stringToToken "isvoid" = IsVoid
-stringToToken "if" = If
-stringToToken "then" = Then
-stringToToken "else" = Else
-stringToToken "fi" = Fi
-stringToToken "while" = While
-stringToToken "loop" = Loop
-stringToToken "pool" = Pool
-stringToToken "case" = Case
-stringToToken "of" = Of
-stringToToken "esac" = Esac
-stringToToken "let" = Let
-stringToToken "in" = In
-stringToToken "true" = Boolean True
-stringToToken "false" = Boolean False
-stringToToken x = Ident x
-
-isIllegal :: TokenInfo -> Bool
-isIllegal (TokenInfo (Illegal _) _) = True
-isIllegal _ = False
+stringToToken :: TokenInfo String -> Token
+stringToToken (TokenInfo _ "class") = Class
+stringToToken (TokenInfo _ "inherits") = Inherits
+stringToToken (TokenInfo _ "new") = New
+stringToToken (TokenInfo _ "not") = Not
+stringToToken (TokenInfo _ "isvoid") = IsVoid
+stringToToken (TokenInfo _ "if") = If
+stringToToken (TokenInfo _ "then") = Then
+stringToToken (TokenInfo _ "else") = Else
+stringToToken (TokenInfo _ "fi") = Fi
+stringToToken (TokenInfo _ "while") = While
+stringToToken (TokenInfo _ "loop") = Loop
+stringToToken (TokenInfo _ "pool") = Pool
+stringToToken (TokenInfo _ "case") = Case
+stringToToken (TokenInfo _ "of") = Of
+stringToToken (TokenInfo _ "esac") = Esac
+stringToToken (TokenInfo _ "let") = Let
+stringToToken (TokenInfo _ "in") = In
+stringToToken (TokenInfo o "true") = Boolean $ TokenInfo o True
+stringToToken (TokenInfo o "false") = Boolean $ TokenInfo o False
+stringToToken (TokenInfo o x) = Ident $ TokenInfo o x
 
 offsetToLineColumn :: String -> Int -> (Int, Int)
 offsetToLineColumn str offset =
@@ -122,6 +121,6 @@ formatError fn s pos =
     let (l, c) = offsetToLineColumn s pos
      in show fn ++ ", " ++ "line " ++ show l ++ ":" ++ show c
 
-lexicalError :: String -> String -> TokenInfo -> String
-lexicalError fn s (TokenInfo (Illegal err) pos) = formatError fn s pos ++ ", Lexical error: " ++ show err
-lexicalError _ _ _ = error "formatError: impossible"
+class (Show a) => FormatErrorKind a where
+    formatErrorKind :: String -> String -> TokenInfo a -> String
+    formatErrorKind fn s (TokenInfo pos err) = formatError fn s pos ++ ", " ++ show err

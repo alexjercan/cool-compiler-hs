@@ -5,19 +5,20 @@ module Parser.Parsec where
 import AST
 import Control.Monad.Combinators.Expr (Operator (..), makeExprParser)
 import Data.Void (Void)
-import Text.Megaparsec (lookAhead, Parsec, anySingle, between, choice, optional, parse, satisfy, sepBy, sepBy1, sepEndBy, sepEndBy1, try, withRecovery, manyTill, (<|>))
+import Text.Megaparsec (Parsec, anySingle, between, choice, lookAhead, manyTill, optional, parse, satisfy, sepBy, sepBy1, sepEndBy, sepEndBy1, try, withRecovery, (<|>))
 import Token
 
-type Parser = Parsec Void [TokenInfo]
+type Parser = Parsec Void [Token]
 
 ast :: Ast
 ast s = case parse programP "" s of
-    Left e -> Left ["Parser should never fail" ++ show e]
-    Right (Program classes) ->
-        let illegalClasses = filter AST.isIllegal classes
-         in if null illegalClasses
-                then Right $ Program classes
-                else Left $ map show illegalClasses
+    Left e -> error $ "Parser should never fail" ++ show e
+    Right (Program classes) -> case foldr go ([], []) classes of
+        ([], classes') -> Right $ Program classes'
+        (errs, _) -> Left errs
+  where
+    go (IllegalStatement ti) (errs, classes) = (ti : errs, classes)
+    go c (errs, classes) = (errs, c : classes)
 
 programP :: Parser Program
 programP = Program <$> manyTill classDefinitionP' (tokenP Eof)
@@ -25,7 +26,7 @@ programP = Program <$> manyTill classDefinitionP' (tokenP Eof)
 classDefinitionP' :: Parser ClassDefinition
 classDefinitionP' = withRecovery recover (classDefinitionP <* tokenP SemiColon)
   where
-    recover = const $ IllegalStatement <$ manyTill anySingle (tokenP SemiColon <* lookAhead (tokenP Class <|> tokenP Eof))
+    recover = const $ IllegalStatement (TokenInfo 0 InvalidParse) <$ manyTill anySingle (tokenP SemiColon <* lookAhead (tokenP Class <|> tokenP Eof))
 
 classDefinitionP :: Parser ClassDefinition
 classDefinitionP = do
@@ -153,35 +154,35 @@ expressionP = makeExprParser termP table
             ]
         ]
 
-tokenP :: Token -> Parser TokenInfo
-tokenP t = satisfy ((== t) . token)
+tokenP :: Token -> Parser Token
+tokenP t = satisfy (== t)
 
-numberP :: Parser TokenInfo
+numberP :: Parser Token
 numberP = try $ do
     anySingle >>= \case
-        t@(TokenInfo (Integer _) _) -> return t
+        t@(Integer _) -> return t
         _ -> fail "Expected integer"
 
-stringP :: Parser TokenInfo
+stringP :: Parser Token
 stringP = try $ do
     anySingle >>= \case
-        t@(TokenInfo (String _) _) -> return t
+        t@(String _) -> return t
         _ -> fail "Expected string"
 
-booleanP :: Parser TokenInfo
+booleanP :: Parser Token
 booleanP = try $ do
     anySingle >>= \case
-        t@(TokenInfo (Boolean _) _) -> return t
+        t@(Boolean _) -> return t
         _ -> fail "Expected boolean"
 
-identP :: Parser TokenInfo
+identP :: Parser Token
 identP = try $ do
     anySingle >>= \case
-        t@(TokenInfo (Ident _) _) -> return t
+        t@(Ident _) -> return t
         _ -> fail "Expected identifier"
 
-typeP :: Parser TokenInfo
+typeP :: Parser Token
 typeP = try $ do
     anySingle >>= \case
-        t@(TokenInfo (Type _) _) -> return t
+        t@(Type _) -> return t
         _ -> fail "Expected type"
