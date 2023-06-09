@@ -39,7 +39,6 @@ data Expression
     | EqualStatement Expression Expression
     | NotStatement Expression
     | AssignStatement TokenInfo Expression
-    | ParenStatement Expression
     | IdentStatement TokenInfo
     | IntegerLiteral TokenInfo
     | StringLiteral TokenInfo

@@ -113,8 +113,7 @@ termP =
             expr <- tokenP Assign >> expressionP
             return $ AssignStatement ident expr
         , do
-            expr <- between (tokenP LeftParen) (tokenP RightParen) expressionP
-            return $ ParenStatement expr
+            between (tokenP LeftParen) (tokenP RightParen) expressionP
         , do
             IdentStatement <$> identP
         , do
