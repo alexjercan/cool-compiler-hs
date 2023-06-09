@@ -60,7 +60,8 @@ library
 
     -- Modules exported by the library.
     exposed-modules:  Token, Lexer.Parsec,
-                      AST, Parser.Parsec
+                      AST, Parser.Parsec,
+                      Scope, Semantic.Definition
 
     -- Modules included in this library but not exported.
     -- other-modules:
@@ -73,6 +74,7 @@ library
                       text,
                       parser-combinators,
                       megaparsec,
+                      containers,
 
     -- Directories containing source files.
     hs-source-dirs:   src
@@ -112,7 +114,7 @@ test-suite cool-compiler-test
     default-language: GHC2021
 
     -- Modules included in this executable, other than Main.
-    other-modules: LexerTest, ParserTest
+    other-modules: LexerTest, ParserTest, SemanticTest
 
     -- LANGUAGE extensions used by modules in this package.
     -- other-extensions:
