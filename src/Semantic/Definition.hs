@@ -16,35 +16,52 @@ semantic p = case errs of
     _ -> Left errs
   where
     (scope, errs) = runWriter $ execStateT (runReaderT passes p) globalScope
-    passes = classDefinitionPass >> classResolutionPass >> resolutionPass
+    passes = classDefinitionPass
+           >> classResolutionPass
+           >> classCyclePass
+           >> attributeDefinitionPass
 
 classDefinitionPass :: SemanticT ()
 classDefinitionPass = do
     Program classes <- ask
-    forM_ classes $ (get >>=) . go
+    forM_ classes $ (get >>=) . visitClass
   where
-    go (ClassDefinition (TokenInfo o name) _ _) programScope
+    visitClass (ClassDefinition (TokenInfo o name) _ _) programScope
         | not $ isClassNameLegal name = tell [TokenInfo o (ClassHasIllegalName name)]
         | isClassDefined name programScope = tell [TokenInfo o (ClassIsRedefined name)]
-        | otherwise = modify $ programScopeInsertClass name (ClassScope Nothing M.empty M.empty)
+        | otherwise = modify $ programScopeInsertClass name (ClassScope Nothing M.empty)
 
 classResolutionPass :: SemanticT ()
 classResolutionPass = do
     Program classes <- ask
-    forM_ classes $ (get >>=) . go
+    forM_ classes $ (get >>=) . visitClass
   where
-    go (ClassDefinition (TokenInfo _ name) (Just (TokenInfo o' name')) _) programScope
+    visitClass (ClassDefinition (TokenInfo _ name) (Just (TokenInfo o' name')) _) programScope
         | not $ isClassNameValidParentName name' = tell [TokenInfo o' (ClassHasIllegalParent name name')]
         | not $ isClassDefined name' programScope = tell [TokenInfo o' (ClassUndefinedParent name name')]
         | otherwise = modify $ programScopeClassAddParent name name'
-    go (ClassDefinition (TokenInfo _ name) Nothing _) _ =
+    visitClass (ClassDefinition (TokenInfo _ name) Nothing _) _ =
         modify $ programScopeClassAddParent name "Object"
 
-resolutionPass :: SemanticT ()
-resolutionPass = do
+classCyclePass :: SemanticT ()
+classCyclePass = do
     Program classes <- ask
-    forM_ classes $ (get >>=) . go
+    forM_ classes $ (get >>=) . visitClass
   where
-    go (ClassDefinition (TokenInfo o name) _ _) programScope
+    visitClass (ClassDefinition (TokenInfo o name) _ _) programScope
         | isClassNameInCycle name programScope = tell [TokenInfo o (ClassInheritanceCycle name)]
         | otherwise = return ()
+
+attributeDefinitionPass :: SemanticT ()
+attributeDefinitionPass = do
+    Program classes <- ask
+    forM_ classes visitClass
+  where
+    visitClass (ClassDefinition (TokenInfo _ name) _ fields) =
+        forM_ fields $ (gets (programScopeGetClass name) >>=) . visitField name
+    visitField _ _ Nothing = return ()
+    visitField cls (AttributeDefinition (TokenInfo o name) (TokenInfo _ typ) _) (Just classScope)
+        | not $ isAttributeNameLegal name = tell [TokenInfo o (AttributeWithIllegalName cls name)]
+        | isAttributeDefined name classScope = tell [TokenInfo o (AttributeIsRedefined cls name)]
+        | otherwise = modify $ programScopeInsertClass cls (classScopeAddAttribute name (AttributeSymbol typ) classScope)
+    visitField _ _ _ = return ()
