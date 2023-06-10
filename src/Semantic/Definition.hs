@@ -1,41 +1,50 @@
 module Semantic.Definition where
 
 import AST
+import Control.Monad.Reader
+import Control.Monad.State
+import Control.Monad.Writer
+import Data.Map qualified as M
 import Scope
 import Token
 
-import Data.Map qualified as M
+type SemanticT = ReaderT Program (StateT ProgramScope (Writer [TokenInfo SemanticError]))
 
 semantic :: Semantic
-semantic p = case s of
-        ([], programScope) -> Right programScope
-        (errs, _) -> Left $ reverse errs
-    where s = resolutionPass p $ classResolutionPass p $ classDefinitionPass p ([], globalScope)
-
-classDefinitionPass :: Program -> ([TokenInfo SemanticError], ProgramScope) -> ([TokenInfo SemanticError], ProgramScope)
-classDefinitionPass (Program classes) initS = foldl go initS classes
+semantic p = case errs of
+    [] -> Right scope
+    _ -> Left errs
   where
-    go (errs, programScope) (ClassDefinition (Type (TokenInfo o name)) _ _)
-        | not $ isClassNameLegal name = (TokenInfo o (ClassHasIllegalName name) : errs, programScope)
-        | isClassDefined name programScope = (TokenInfo o (ClassIsRedefined name) : errs, programScope)
-        | otherwise = (errs, programScopeInsertClass name (ClassScope Nothing M.empty M.empty) programScope)
-    go _ _ = error "classDefinitionPass: impossible"
+    (scope, errs) = runWriter $ execStateT (runReaderT passes p) globalScope
+    passes = classDefinitionPass >> classResolutionPass >> resolutionPass
 
-classResolutionPass :: Program -> ([TokenInfo SemanticError], ProgramScope) -> ([TokenInfo SemanticError], ProgramScope)
-classResolutionPass (Program classes) initS = foldl go initS classes
+classDefinitionPass :: SemanticT ()
+classDefinitionPass = do
+    Program classes <- ask
+    forM_ classes $ (get >>=) . go
   where
-    go (errs, programScope) (ClassDefinition (Type (TokenInfo _ name)) (Just (Type (TokenInfo o' name'))) _)
-        | not $ isClassNameValidParentName name' = (TokenInfo o' (ClassHasIllegalParent name name') : errs, programScope)
-        | not $ isClassDefined name' programScope = (TokenInfo o' (ClassUndefinedParent name name') : errs, programScope)
-        | otherwise = (errs, programScopeClassAddParent name name' programScope)
-    go (errs, programScope) (ClassDefinition (Type (TokenInfo _ name)) Nothing _)
-        = (errs, programScopeClassAddParent name "Object" programScope)
-    go _ _ = error "classResolutionPass: impossible"
+    go (ClassDefinition (TokenInfo o name) _ _) programScope
+        | not $ isClassNameLegal name = tell [TokenInfo o (ClassHasIllegalName name)]
+        | isClassDefined name programScope = tell [TokenInfo o (ClassIsRedefined name)]
+        | otherwise = modify $ programScopeInsertClass name (ClassScope Nothing M.empty M.empty)
 
-resolutionPass :: Program -> ([TokenInfo SemanticError], ProgramScope) -> ([TokenInfo SemanticError], ProgramScope)
-resolutionPass (Program classes) initS = foldl go initS classes
-    where
-        go (errs, programScope) (ClassDefinition (Type (TokenInfo o name)) _ _)
-            | isClassNameInCycle name programScope = (TokenInfo o (ClassInheritanceCycle name) : errs, programScope)
-            | otherwise = (errs, programScope)
-        go _ _ = error "resolutionPass: impossible"
+classResolutionPass :: SemanticT ()
+classResolutionPass = do
+    Program classes <- ask
+    forM_ classes $ (get >>=) . go
+  where
+    go (ClassDefinition (TokenInfo _ name) (Just (TokenInfo o' name')) _) programScope
+        | not $ isClassNameValidParentName name' = tell [TokenInfo o' (ClassHasIllegalParent name name')]
+        | not $ isClassDefined name' programScope = tell [TokenInfo o' (ClassUndefinedParent name name')]
+        | otherwise = modify $ programScopeClassAddParent name name'
+    go (ClassDefinition (TokenInfo _ name) Nothing _) _ =
+        modify $ programScopeClassAddParent name "Object"
+
+resolutionPass :: SemanticT ()
+resolutionPass = do
+    Program classes <- ask
+    forM_ classes $ (get >>=) . go
+  where
+    go (ClassDefinition (TokenInfo o name) _ _) programScope
+        | isClassNameInCycle name programScope = tell [TokenInfo o (ClassInheritanceCycle name)]
+        | otherwise = return ()

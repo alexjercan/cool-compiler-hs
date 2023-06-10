@@ -75,6 +75,7 @@ library
                       parser-combinators,
                       megaparsec,
                       containers,
+                      mtl,
 
     -- Directories containing source files.
     hs-source-dirs:   src

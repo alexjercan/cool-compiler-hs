@@ -108,7 +108,7 @@ programScopeInsertClass name classScope (ProgramScope classes) =
 
 programScopeClassAddParent :: String -> String -> ProgramScope -> ProgramScope
 programScopeClassAddParent name parent (ProgramScope classes) =
-    ProgramScope $ M.adjust (\p -> p { classScopeParent = Just parent }) name classes
+    ProgramScope $ M.adjust (\p -> p{classScopeParent = Just parent}) name classes
 
 data SemanticError
     = ClassHasIllegalName String
@@ -144,8 +144,8 @@ isClassNameValidParentName _ = True
 
 isClassNameInCycle :: String -> ProgramScope -> Bool
 isClassNameInCycle name (ProgramScope classes) = go name
-    where
-        go current = case M.lookup current classes >>= classScopeParent of
-                        (Just parent) | parent == name -> True
-                        (Just parent) -> go parent
-                        Nothing -> False
+  where
+    go current = case M.lookup current classes >>= classScopeParent of
+        (Just parent) | parent == name -> True
+        (Just parent) -> go parent
+        Nothing -> False

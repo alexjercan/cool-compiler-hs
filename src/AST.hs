@@ -4,6 +4,8 @@ import Token
 
 type Ast = [Token] -> Either [TokenInfo ParserError] Program
 
+type IllegalStatement = TokenInfo ParserError
+
 data ParserError = InvalidParse
     deriving (Show, Eq)
 
@@ -14,26 +16,25 @@ newtype Program = Program [ClassDefinition]
     deriving (Show, Eq)
 
 data ClassDefinition
-    = ClassDefinition Token (Maybe Token) [FieldDefinition]
-    | IllegalStatement (TokenInfo ParserError)
+    = ClassDefinition Type (Maybe Type) [FieldDefinition]
     deriving (Show, Eq)
 
 data FieldDefinition
-    = MethodDefinition Token [Formal] Token Expression
-    | AttributeDefinition Token Token (Maybe Expression)
+    = MethodDefinition Name [Formal] Type Expression
+    | AttributeDefinition Name Type (Maybe Expression)
     deriving (Show, Eq)
 
-data Formal = Formal Token Token
+data Formal = Formal Name Type
     deriving (Show, Eq)
 
 data Expression
-    = MethodCall (Maybe Expression) (Maybe Token) Token [Expression]
+    = MethodCall (Maybe Expression) (Maybe Type) Name [Expression]
     | IfStatement Expression Expression Expression
     | WhileStatement Expression Expression
     | BlockStatement [Expression]
     | LetStatement [VariableDefinition] Expression
     | CaseStatement Expression [CaseOfDefinition]
-    | NewStatement Token
+    | NewStatement Type
     | NegationStatement Expression
     | IsVoidStatement Expression
     | MulStatement Expression Expression
@@ -44,19 +45,18 @@ data Expression
     | LessThanOrEqualStatement Expression Expression
     | EqualStatement Expression Expression
     | NotStatement Expression
-    | AssignStatement Token Expression
-    | IdentStatement Token
-    | IntegerLiteral Token
-    | StringLiteral Token
-    | BoolLiteral Token
+    | AssignStatement Name Expression
+    | IdentStatement Name
+    | IntegerLiteral (TokenInfo Integer)
+    | StringLiteral (TokenInfo String)
+    | BoolLiteral (TokenInfo Bool)
     deriving (Show, Eq)
 
-data VariableDefinition = VariableDefinition Token Token (Maybe Expression)
+data VariableDefinition = VariableDefinition Name Type (Maybe Expression)
     deriving (Show, Eq)
 
-data CaseOfDefinition = CaseOfDefinition Token Token Expression
+data CaseOfDefinition = CaseOfDefinition Name Type Expression
     deriving (Show, Eq)
 
-isIllegal :: ClassDefinition -> Bool
-isIllegal (IllegalStatement _) = True
-isIllegal _ = False
+type Type = TokenInfo String
+type Name = TokenInfo String
